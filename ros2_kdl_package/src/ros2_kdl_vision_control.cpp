@@ -126,11 +126,12 @@ public:
         KDL::Jacobian J_cam = robot_->getEEJacobian();
 
         // From object to base frame with offset on rotation and position
-        KDL::Frame cam_T_object(marker.M, marker.p);
+        KDL::Frame cam_T_object(marker.M*KDL::Rotation::RotY(-1.57), 
+                    KDL::Vector(marker.p.data[0]+0.03,marker.p.data[1],marker.p.data[2]-0.14));
         base_T_object = robot_->getEEFrame() * cam_T_object;
-        double p_offset = 0;     // Position offset
-        double R_offset = 0.314/2;     // Orientation offset. Put at 0 to centre the aruco
-        base_T_object.p = base_T_object.p + KDL::Vector(0.0,0.0,p_offset);
+        // double p_offset = 0.02;     // Position offset
+        // double R_offset = 0.314/2;     // Orientation offset. Put at 0 to centre the aruco
+        base_T_object.p = base_T_object.p; //+ KDL::Vector(0.2,0.04,p_offset);
         base_T_object.M = base_T_object.M;
 
         Eigen::Vector3d end_position = toEigen(base_T_object.p);
@@ -207,13 +208,13 @@ private:
 
         // compute errors
         Eigen::Vector3d error = computeLinearError(Eigen::Vector3d(base_T_object.p.data), Eigen::Vector3d(cartpos.p.data));
-        Eigen::Vector3d o_error = computeOrientationError(toEigen(Fi.M), toEigen(base_T_object.M));
+        Eigen::Vector3d o_error = computeOrientationError(toEigen(cartpos.M), toEigen(base_T_object.M));
         std::cout << "The error norm is : " << error.norm() << std::endl;
 
         if(task_ == "positioning"){
             // Next Frame
             // Compute differential IK
-            Vector6d cartvel; cartvel << p.vel + 5*error, o_error;
+            Vector6d cartvel; cartvel << 0.05*p.vel + 5*error, 0.1*o_error;
             joint_velocities_.data = pseudoinverse(robot_->getEEJacobian().data)*cartvel;
             joint_positions_.data = joint_positions_.data + joint_velocities_.data*dt;
         }
